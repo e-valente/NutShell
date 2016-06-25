@@ -29,6 +29,7 @@
 #include <tparse.h>
 #include <debug.h>
 #include <user_level.h>
+#include <native_commands.h>
 
 #define PROMPT "@NutShell:"
 #define MAX_BUFF_COMMAND 512
@@ -82,6 +83,16 @@ int main (int argc, char **argv)
 	  for(i=0; pipeline->command[i][0]; i++)
 	    {
 	      strncpy(cmd, pipeline->command[i][0], MAX_BUFF_COMMAND);
+
+	      /*check if the command is native from shell*/
+	      result = parse_native_command(cmd);
+	      if(result == EXIT_COMMAND)
+		{
+		  go_on = 0;
+		  continue;
+		}
+
+
 	      /*process args*/
 	      for (j=1; pipeline->command[i][j]; j++)
 		{
@@ -125,6 +136,7 @@ int main (int argc, char **argv)
   release_pipeline (pipeline);
   free(prompt);
   free(cmd);
+  printf("Bye for now!\n\n");
 
   return EXIT_SUCCESS;
 }

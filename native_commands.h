@@ -1,4 +1,4 @@
-/* user_level.h - Header for the NutShell.
+/* native_commands.h - Header for the NutShell.
 
    Copyright (c) 2016 Emanuel Valente <emanuelvalente@gmail.com>
 
@@ -17,13 +17,15 @@
 
 */
 
+#ifndef NATIVE_COMMANDS_H
+#define NATIVE_COMMANDS_H
+
+#define EXIT_COMMAND 2
+#define REGULAR_NATIVE_COMMAND 1
+#define USER_COMMAND 0
 
 
-#ifndef USER_LEVEL_H
-#define USER_LEVEL_H
+int parse_native_command(char*);
 
-char *get_prompt();
-
-
-#endif // USER_LEVEL_H
+#endif // NATIVE_COMMANDS_H
 
