@@ -2,10 +2,10 @@
 
    Copyright (c) 2016 Emanuel Valente <emanuelvalente@gmail.com>
 
-   Nutshell is derived from POSIXeg
-   Copyright (c) 2014 Francisco Jose Monaco
+   Nutshell is derived from POSIXeg Fool Shell -
+   https://gitlab.com/monaco/posixeg/shell/foolsh
+   Copyright (c) 2015 Francisco Jose Monaco <monaco@icmc.usp.br>
    POSIXeg repository can be found at https://gitlab.com/monaco/posixeg
-   This file is part of Nutshell
    Nutshell is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation, either version 3 of the License, or

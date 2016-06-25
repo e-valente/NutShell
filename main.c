@@ -2,9 +2,11 @@
 
    Copyright (c) 2016 Emanuel Valente <emanuelvalente@gmail.com>
 
-   Nutshell is derived from POSIXeg
-   Copyright (c) 2014 Francisco Jose Monaco
+   Nutshell is derived from POSIXeg Fool Shell -
+   https://gitlab.com/monaco/posixeg/shell/foolsh
+   Copyright (c) 2015 Francisco Jose Monaco <monaco@icmc.usp.br>
    POSIXeg repository can be found at https://gitlab.com/monaco/posixeg
+
    This file is part of Nutshell
    Nutshell is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -26,8 +28,11 @@
 #include <stdio.h>
 #include <tparse.h>
 #include <debug.h>
+#include <user_level.h>
 
-#define PROMPT "@:"
+#define PROMPT "@NutShell:"
+#define MAX_BUFF_COMMAND 512
+char *prompt;
 
 /* void test(void); */
 
@@ -37,6 +42,11 @@ int main (int argc, char **argv)
 {
   buffer_t *command_line;
   int i, j, aux;
+  int result;
+  char *cmd;
+
+  /*process the prompt string*/
+  prompt = get_prompt();
 
   pipeline_t *pipeline;
 
@@ -44,13 +54,16 @@ int main (int argc, char **argv)
 
   pipeline = new_pipeline ();
 
+  /*prepares cmd buffer*/
+  cmd = (char*)malloc(sizeof(char) * MAX_BUFF_COMMAND);
+
   /* This is the main loop. */
 
   while (go_on)
     {
       /* Prompt. */
 
-      printf ("%s ", PROMPT);
+      printf ("%s ", prompt);
       fflush (stdout);
       aux = read_command_line (command_line);
       sysfatal (aux<0);
@@ -64,8 +77,23 @@ int main (int argc, char **argv)
 	  /* This is an example, of how to use pipeline_t.
 	     See tparse.h for detailed information. */
 
-	  printf ("  Pipeline has %d command(s)\n", pipeline->ncommands);
+	  /*printf ("  Pipeline has %d command(s)\n", pipeline->ncommands);*/
 
+	  for(i=0; pipeline->command[i][0]; i++)
+	    {
+	      strncpy(cmd, pipeline->command[i][0], MAX_BUFF_COMMAND);
+	      /*process args*/
+	      for (j=1; pipeline->command[i][j]; j++)
+		{
+		  /*snprintf(cmd, MAX_BUFF_COMMAND, "%s%s ", cmd, pipeline->command[i][j]);*/
+		  strncat(cmd, " ", MAX_BUFF_COMMAND);
+		  strncat(cmd, pipeline->command[i][j], MAX_BUFF_COMMAND);
+		}
+		//printf("command->> %s\n", cmd);
+		runcmd(cmd, &result, NULL);
+	    }
+
+	  /*
 	  for (i=0; pipeline->command[i][0]; i++)
 	    {
 	      printf ("  Command %d has %d argument(s): ", i, pipeline->narguments[i]);
@@ -86,6 +114,7 @@ int main (int argc, char **argv)
 	    printf ("  Redirect input from %s\n", pipeline->file_in);
 	  if ( REDIRECT_STDOUT(pipeline))
 	    printf ("  Redirect output to  %s\n", pipeline->file_out);
+	    */
 
 	  /* This is where we would fork and exec. */
 
@@ -94,6 +123,8 @@ int main (int argc, char **argv)
 
   release_command_line (command_line);
   release_pipeline (pipeline);
+  free(prompt);
+  free(cmd);
 
   return EXIT_SUCCESS;
 }
