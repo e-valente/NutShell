@@ -34,12 +34,12 @@ char *get_prompt()
   /*get login name*/
   login = getlogin();
 
-  /*@NutShell: (11 chars) + login size*/
-  prompt_total_bytes = (sizeof(char) * 11) + (sizeof(char) * (strlen(login) + 1) );
+  /*@NutShell]$: (13 chars) + '[' login size*/
+  prompt_total_bytes = (sizeof(char) * 13) + (sizeof(char) * (strlen(login) + 2) );
   prompt = (char*)malloc(prompt_total_bytes);
 
   /*concats login@NutShell:*/
-  snprintf(prompt, prompt_total_bytes, "%s%s", login, "@NutShell:");
+  snprintf(prompt, prompt_total_bytes, "[%s%s]$", login, "@NutShell");
 
   return prompt;
 
