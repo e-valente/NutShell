@@ -36,7 +36,7 @@ int parse_native_command(char *cmd)
           if(strcmp(cmd, "exit") == 0)
             return EXIT_COMMAND;
           else
-            REGULAR_NATIVE_COMMAND;
+            return REGULAR_NATIVE_COMMAND;
         }
 
     }

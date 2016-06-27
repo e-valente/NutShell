@@ -60,10 +60,11 @@
 /* Subprocess' exit status upon exec failure.*/
 
 #define EXECFAILSTATUS 127
+#define MAX_PID_VALUE 32768 /*2^15*/
 
 /* Run a command in a subprocess. */
 
-int runcmd (const char *command, int *result, const int *io);
+int runcmd (const char *command, int *result, int *io);
 
 /* Hanlder for SIGCHLD in nonblock mode. */
 

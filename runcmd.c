@@ -33,6 +33,8 @@
 #include <runcmd.h>
 #include <debug.h>
 
+void signal_from_child_handler(int signal, siginfo_t* info, void *u);
+int is_nonblock_array[MAX_PID_VALUE];
 
 /* Executes 'command' in a subprocess. Information on the subprocess execution
    is stored in 'result' after its completion, and can be inspected with the
@@ -42,16 +44,16 @@
    shall be redirected; if NULL, no redirection is performed. On
    success, returns subprocess' pid; on error, returns 0. */
 
-int runcmd (const char *command, int *result, const int *io) /* ToDO: const char* */
+int runcmd (const char *command, int *result,  int *io) /* ToDO: const char* */
 {
   int pid, status, pipeid[2];
-  int aux, total_args, i, tmp_result, is_noblock;
+  int aux, total_args, i, tmp_result, is_nonblock;
   char *args[RCMD_MAXARGS], *p, *cmd, buff;
   struct sigaction act;
 
 
   tmp_result = 0;
-  is_noblock = 0;
+  is_nonblock = 0;
 
 
   /* Parse arguments to obtain an argv vector. */
@@ -69,8 +71,9 @@ int runcmd (const char *command, int *result, const int *io) /* ToDO: const char
   /*verifies if it will execute as non-blocking mode*/
   if(args[total_args -1][0] == '&')
    {
-      is_noblock = 1;
-      /*overwrite '&'*/
+      is_nonblock = 1;
+      tmp_result |= NONBLOCK;
+      /*overwrites '&'*/
       args[total_args -1] = NULL;
     }
 
@@ -82,22 +85,26 @@ int runcmd (const char *command, int *result, const int *io) /* ToDO: const char
   if(! memset(&act, 0, sizeof(struct sigaction)) )
     sysfail(1, 0);
 
+
   /* Create a subprocess. */
   pid = fork();
   sysfail (pid<0, -1);
 
+  if (IS_NONBLOCK(tmp_result) && runcmd_onexit != NULL)
+    {
+      struct sigaction sa_runcmd;
+      sa_runcmd.sa_sigaction = signal_from_child_handler;
+      sysfail(sigaction(SIGCHLD, &sa_runcmd, NULL) < 0, -1);
+    }
+
+
   if (pid>0)			/* Caller process (parent). */
     {
-      /*verifies if NOBLOCK mode*/
-      if(is_noblock)
+
+      if(!is_nonblock)
         {
-          tmp_result |= NONBLOCK;
-        }
-      /*if nonblock => parent must not wait
-       * for the child*/
-      else
-        {
-          aux = wait (&status);
+          aux = waitpid(pid, &status, 0);
+          /*aux = wait (&status);*/
           sysfail (aux<0, -1);
 
           /*if aux has one byte -> EXECOK
@@ -122,25 +129,33 @@ int runcmd (const char *command, int *result, const int *io) /* ToDO: const char
   else /* Subprocess (child) */
     {
       /*verifies if we should redirect I/O*/
-      if(io != NULL)
+
+      if(io)
         {
-          for(i=0; i<3; i++ )
+          int std_fd[]={ STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO };
+          for (i=0; i<3; i++)
             {
-              close(i);
-              dup(io[i]); /*i receives io[i]*/
-              close(io[i]);
+              if (io[std_fd[i]] > 0)
+                {
+                  aux = dup2(io[std_fd[i]], std_fd[i]);
+                  sysfail (aux<0, -1);
+                }
             }
         }
-
 
       /*write one byte on pipe*/
       close(pipeid[0]); /*we don't want to read*/
       buff = 0;
       write(pipeid[1], &buff, 1);
 
+      if(is_nonblock)
+        /*fix me*/
+        setpgid(0, 0);
+
       aux = execvp (args[0], args);
 
-      /*writes on more byte (error)
+      /*only reaches here if an error occured:
+       * writes on more byte (error)
        * on pipe (error occurred)*/
       buff = 1;
       write(pipeid[1], &buff, 1);
@@ -163,6 +178,14 @@ int runcmd (const char *command, int *result, const int *io) /* ToDO: const char
    termination. If this variable points to NULL, no action is performed.
 */
 
+
+
 void (*runcmd_onexit)(void) = NULL;
+
+void signal_from_child_handler(int sig, siginfo_t *info, void *u)
+{
+	if (runcmd_onexit != NULL)
+		runcmd_onexit();
+}
 
 

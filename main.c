@@ -26,10 +26,13 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <tparse.h>
 #include <debug.h>
 #include <user_level.h>
 #include <native_commands.h>
+#include <exec_pipeline.h>
+#include <runcmd.h>
 
 #define PROMPT "@NutShell:"
 #define MAX_BUFF_COMMAND 512
@@ -46,6 +49,7 @@ int main (int argc, char **argv)
   int result;
   char *cmd;
 
+ /* main2(argc, argv);*/
   /*process the prompt string*/
   prompt = get_prompt();
 
@@ -73,38 +77,98 @@ int main (int argc, char **argv)
 
       if (!parse_command_line (command_line, pipeline))
         {
+          if(pipeline->ncommands < 1)
+            continue;
 
+
+	  if(RUN_FOREGROUND(pipeline))
+	    {
+	      /*just one command without redirect I/O*/
+	      if(pipeline->ncommands == 1 && !REDIRECT_STDIN(pipeline)
+		 && !REDIRECT_STDOUT(pipeline))
+		{
+		  /*check if the command is native from shell*/
+		  result = parse_native_command(*pipeline->command[0]);
+		  if(result == EXIT_COMMAND)
+		    {
+		      go_on = 0;
+		      continue;
+		    }
+
+		  exec_pipeline_one_command(pipeline);
+		}
+
+	      /*more than one command*/
+	      /*possible to redirect*/
+	      else {
+		  if ( REDIRECT_STDIN(pipeline)) {
+		      printf ("  Redirect input from %s\n", pipeline->file_in);
+		      exec_pipeline_redir_input(pipeline);
+		    }
+		  if ( REDIRECT_STDOUT(pipeline))
+		    {
+		    printf ("  Redirect output to  %s\n", pipeline->file_out);
+		    exec_pipeline_redir_output(pipeline);
+		    }
+
+		  for(i=0; pipeline->command[i][0]; i++)
+		    printf("more than one command\n");
+
+		}
+	    }/*IF FOREGROUND*/
+
+	  /*BACKGROUND*/
+	  else
+	    {
+	      strncpy(cmd, pipeline->command[0][0], MAX_BUFF_COMMAND);
+	      strncat(cmd, " &", MAX_BUFF_COMMAND);
+	      runcmd(cmd, &result, NULL);
+
+	    }
+	}
+    }
+
+  release_command_line (command_line);
+  release_pipeline (pipeline);
+  free(prompt);
+  free(cmd);
+  printf("Bye for now!\n\n");
+
+  return EXIT_SUCCESS;
+}
+
+int main2 (int argc, char **argv)
+{
+  buffer_t *command_line;
+  int i, j, aux;
+
+  pipeline_t *pipeline;
+
+  command_line = new_command_line ();
+
+  pipeline = new_pipeline ();
+
+  /* This is the main loop. */
+
+  while (go_on)
+    {
+      /* Prompt. */
+
+      printf ("%s ", PROMPT);
+      fflush (stdout);
+      aux = read_command_line (command_line);
+      sysfatal (aux<0);
+
+      /* Parse command line (see tparse.*) */
+
+      if (!parse_command_line (command_line, pipeline))
+        {
 
 	  /* This is an example, of how to use pipeline_t.
 	     See tparse.h for detailed information. */
 
-	  /*printf ("  Pipeline has %d command(s)\n", pipeline->ncommands);*/
+	  printf ("  Pipeline has %d command(s)\n", pipeline->ncommands);
 
-	  for(i=0; pipeline->command[i][0]; i++)
-	    {
-	      strncpy(cmd, pipeline->command[i][0], MAX_BUFF_COMMAND);
-
-	      /*check if the command is native from shell*/
-	      result = parse_native_command(cmd);
-	      if(result == EXIT_COMMAND)
-		{
-		  go_on = 0;
-		  continue;
-		}
-
-
-	      /*process args*/
-	      for (j=1; pipeline->command[i][j]; j++)
-		{
-		  /*snprintf(cmd, MAX_BUFF_COMMAND, "%s%s ", cmd, pipeline->command[i][j]);*/
-		  strncat(cmd, " ", MAX_BUFF_COMMAND);
-		  strncat(cmd, pipeline->command[i][j], MAX_BUFF_COMMAND);
-		}
-		//printf("command->> %s\n", cmd);
-		runcmd(cmd, &result, NULL);
-	    }
-
-	  /*
 	  for (i=0; pipeline->command[i][0]; i++)
 	    {
 	      printf ("  Command %d has %d argument(s): ", i, pipeline->narguments[i]);
@@ -125,7 +189,6 @@ int main (int argc, char **argv)
 	    printf ("  Redirect input from %s\n", pipeline->file_in);
 	  if ( REDIRECT_STDOUT(pipeline))
 	    printf ("  Redirect output to  %s\n", pipeline->file_out);
-	    */
 
 	  /* This is where we would fork and exec. */
 
@@ -134,9 +197,7 @@ int main (int argc, char **argv)
 
   release_command_line (command_line);
   release_pipeline (pipeline);
-  free(prompt);
-  free(cmd);
-  printf("Bye for now!\n\n");
 
   return EXIT_SUCCESS;
 }
+
