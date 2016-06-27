@@ -22,6 +22,7 @@ AM_CPPFLAGS = -I.
 bin_PROGRAMS = nutshell
 
 nutshell_SOURCES = main.c runcmd.c parser.c user_level.c runcmd.h parser.h \
-tparse.h user_level.h debug.h native_commands.c native_commands.h
+tparse.h user_level.h debug.h native_commands.c native_commands.h exec_pipeline.c exec_pipeline.h
+
 
 

@@ -49,7 +49,7 @@ int main (int argc, char **argv)
   int result;
   char *cmd;
 
- /* main2(argc, argv);*/
+  /*main2(argc, argv);*/
   /*process the prompt string*/
   prompt = get_prompt();
 
@@ -101,18 +101,22 @@ int main (int argc, char **argv)
 	      /*more than one command*/
 	      /*possible to redirect*/
 	      else {
-		  if ( REDIRECT_STDIN(pipeline)) {
-		      printf ("  Redirect input from %s\n", pipeline->file_in);
-		      exec_pipeline_redir_input(pipeline);
-		    }
-		  if ( REDIRECT_STDOUT(pipeline))
+		  for (i=0; pipeline->command[i][0]; i++)
 		    {
-		    printf ("  Redirect output to  %s\n", pipeline->file_out);
-		    exec_pipeline_redir_output(pipeline);
-		    }
+		      if ( REDIRECT_STDIN(pipeline) &&  REDIRECT_STDOUT(pipeline))
+			  exec_pipeline_redir_input_output(pipeline, i);
 
-		  for(i=0; pipeline->command[i][0]; i++)
-		    printf("more than one command\n");
+		      else if ( REDIRECT_STDOUT(pipeline))
+			    exec_pipeline_redir_output(pipeline, i);
+
+		      else
+			{
+			  if ( REDIRECT_STDIN(pipeline))
+			     exec_pipeline_redir_input(pipeline, i);
+
+			}
+
+		    }
 
 		}
 	    }/*IF FOREGROUND*/
